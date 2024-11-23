@@ -6,7 +6,6 @@ pipeline {
         stage('Checkout') {
             steps {
                 script {
-                    // Checkout the Git repository
                     checkout scmGit(
                         branches: [[name: '*/master']], 
                         extensions: [], 
@@ -16,6 +15,6 @@ pipeline {
             }
         }
         
-        // Other stages for your pipeline go here...
+        
     }
 }
