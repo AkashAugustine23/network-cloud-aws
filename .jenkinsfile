@@ -1,20 +1,43 @@
-
 pipeline {
     agent any
-    
+    environment {
+        IMAGE_NAME = 'ec2-test-page' 
+        CONTAINER_NAME = 'ec2-test-page'
+        HOST_PORT = '9000' // Changed Host port to avoid conflict with Jenkins
+        CONTAINER_PORT = '80' // Port inside the container
+        GIT_REPO = 'https://github.com/AkashAugustine23/network-cloud-aws.git' // Repository URL
+    }
     stages {
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
-                script {
-                    checkout scmGit(
-                        branches: [[name: '*/master']], 
-                        extensions: [], 
-                        userRemoteConfigs: [[url: 'https://github.com/AkashAugustine23/network-cloud-aws.git']]
-                    )
-                }
+                git "${GIT_REPO}" // Clone the repository
             }
         }
-        
-        
+        stage('Build Docker Image') {
+            steps {
+                sh "docker build -t ${IMAGE_NAME} ." // Build the Docker image
+            }
+        }
+        stage('Run Docker Container') {
+            steps {
+                sh """
+                # Stop and remove any running container with the same name
+                if [ "$(docker ps -q -f name=${CONTAINER_NAME})" ]; then
+                    docker stop ${CONTAINER_NAME}
+                    docker rm ${CONTAINER_NAME}
+                fi
+                # Run the new container with the updated port
+                docker run -d --name ${CONTAINER_NAME} -p ${HOST_PORT}:${CONTAINER_PORT} ${IMAGE_NAME}
+                """
+            }
+        }
+    }
+    post {
+        success {
+            echo "Application is running on port ${HOST_PORT}."
+        }
+        failure {
+            echo "Pipeline failed. Please check the logs."
+        }
     }
 }
