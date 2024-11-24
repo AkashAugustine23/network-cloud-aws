@@ -1,43 +1,31 @@
 pipeline {
     agent any
-    environment {
-        IMAGE_NAME = 'ec2-test-page' 
-        CONTAINER_NAME = 'ec2-test-page'
-        HOST_PORT = '9000' // Changed Host port to avoid conflict with Jenkins
-        CONTAINER_PORT = '80' // Port inside the container
-        GIT_REPO = 'https://github.com/AkashAugustine23/network-cloud-aws.git' // Repository URL
-    }
     stages {
-        stage('Checkout Code') {
+        stage('Clone Repository') {
             steps {
-                git "${GIT_REPO}" // Clone the repository
+                checkout scmGit(
+                    branches: [[name: '*/main']],
+                    extensions: [],
+                    userRemoteConfigs: [[
+                        credentialsId: 'githubtoken',
+                        url: 'https://github.com/AkashAugustine23/network-cloud-aws.git'
+                    ]]
+                )
             }
         }
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t ${IMAGE_NAME} ." // Build the Docker image
+                script {
+                    sh 'docker build -t my-docker-image:latest .' // Build the Docker image
+                }
             }
         }
         stage('Run Docker Container') {
             steps {
-                sh """
-                # Stop and remove any running container with the same name
-                if [ "$(docker ps -q -f name=${CONTAINER_NAME})" ]; then
-                    docker stop ${CONTAINER_NAME}
-                    docker rm ${CONTAINER_NAME}
-                fi
-                # Run the new container with the updated port
-                docker run -d --name ${CONTAINER_NAME} -p ${HOST_PORT}:${CONTAINER_PORT} ${IMAGE_NAME}
-                """
+                script {
+                    sh 'docker run -d -p 9000:80 my-docker-image:latest' // Run the Docker container
+                }
             }
-        }
-    }
-    post {
-        success {
-            echo "Application is running on port ${HOST_PORT}."
-        }
-        failure {
-            echo "Pipeline failed. Please check the logs."
         }
     }
 }
